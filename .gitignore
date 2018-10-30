@@ -1,10 +1,14 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+pytype_output/
 *.py[cod]
 *$py.class
 
 # C extensions
 *.so
+
+# Editor files
+*~
 
 # Distribution / packaging
 .Python
@@ -45,6 +49,7 @@ nosetests.xml
 coverage.xml
 *,cover
 .hypothesis/
+.pytest_cache/
 
 # Translations
 *.mo
@@ -96,3 +101,10 @@ ENV/
 # vim temp files
 *.swp
 *.swo
+
+.mypy_cache
+
+# IntelliJ IDE files
+.idea/
+faucet.iml
+*.bak

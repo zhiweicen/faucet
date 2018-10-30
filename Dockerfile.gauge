@@ -1,25 +1,13 @@
-FROM osrg/ryu
+## Image name: faucet/gauge
 
-RUN \
-  apt-get update && \
-  apt-get install -qy --no-install-recommends \
-    gcc \
-    git \
-    libpython3-all-dev \
-    libyaml-dev \
-    netbase \
-    python3-pip
+FROM faucet/python3
 
 COPY ./ /faucet-src/
 
-RUN \
-  pip3 install --upgrade pip && \
-  pip3 install setuptools wheel virtualenv --upgrade && \
-  pip3 install -r /faucet-src/requirements.txt && \
-  pip3 install /faucet-src
+RUN ./faucet-src/docker/install-faucet.sh
 
-VOLUME ["/etc/ryu/faucet/", "/var/log/ryu/faucet/"]
+VOLUME ["/etc/faucet/", "/var/log/faucet/"]
 
-EXPOSE 6653
+EXPOSE 6653 9303
 
-CMD ["ryu-manager", "faucet.gauge"]
+CMD ["gauge"]

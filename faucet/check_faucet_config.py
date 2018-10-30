@@ -4,7 +4,7 @@
 
 # Copyright (C) 2015 Brad Cowie, Christopher Lorier and Joe Stringer.
 # Copyright (C) 2015 Research and Education Advanced Network New Zealand Ltd.
-# Copyright (C) 2015--2017 The Contributors
+# Copyright (C) 2015--2018 The Contributors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,42 +19,45 @@
 # limitations under the License.
 
 import logging
+import os
 import sys
 
-try:
-    import valve
-    from config_parser import dp_parser
-except ImportError:
-    from faucet import valve
-    from faucet.config_parser import dp_parser
+from faucet import valve
+from faucet.config_parser import dp_parser
+from faucet.conf import InvalidConfigError
 
 
-def check_config(conf_files):
-    logname = '/dev/null'
+def check_config(conf_files, debug_level, check_output_file):
+    """Return True and successful config dict, if all config can be parsed."""
+    logname = os.devnull
     logger = logging.getLogger('%s.config' % logname)
     logger_handler = logging.StreamHandler(stream=sys.stderr)
     logger.addHandler(logger_handler)
     logger.propagate = 0
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(debug_level)
+    check_output = ''
+    check_result = False
 
     for conf_file in conf_files:
-        parse_result = dp_parser(conf_file, logname)
-        if parse_result is None:
-            return False
-        else:
-            _, dps = parse_result
+        try:
+            _, dps = dp_parser(conf_file, logname)
             for dp in dps:
                 valve_dp = valve.valve_factory(dp)
                 if valve_dp is None:
-                    return False
-                print((dp.to_conf()))
-    return True
+                    check_result = False
+                    break
+                check_output = dp.to_conf()
+                check_result = True
+        except InvalidConfigError as config_err:
+            check_output = config_err
+    check_output_file.write(str(check_output))
+    return check_result
+
 
 def main():
-    if check_config(sys.argv[1:]):
-        sys.exit(0)
-    else:
-        sys.exit(-1)
+    """Mainline."""
+    sys.exit(not check_config(sys.argv[1:], logging.DEBUG, sys.stdout))
+
 
 if __name__ == '__main__':
     main()

@@ -1,36 +1,44 @@
 version: '2'
 services:
-    db:
+    influxdb:
         restart: always
-        image: 'tutum/influxdb:0.13'
+        image: 'influxdb:1.6-alpine'
         ports:
             - '8086'
             - '8083'
         volumes:
-            - '/opt/influxdb/shared/data/db:/data'
+            - '${FAUCET_PREFIX}/opt/influxdb/shared/data/db:/var/lib/influxdb'
         environment:
-            PRE_CREATE_DB: 'faucet'
-            ADMIN_USER: 'faucet'
-            INFLUXDB_INIT_PWD: 'faucet'
+            INFLUXDB_DB: 'faucet'
+            INFLUXDB_HTTP_AUTH_ENABLED: 'true'
+            INFLUXDB_ADMIN_USER: 'faucet'
+            INFLUXDB_ADMIN_PASSWORD: 'faucet'
 
-    couchdb:
+    prometheus:
         restart: always
-        image: 'couchdb:1.6'
+        image: 'prom/prometheus:v2.4.3'
+        user: 'root'
+        ports:
+            - '9090:9090'
         volumes:
-            - '/opt/couchdb:/usr/local/var/lib/couchdb'
-        environment:
-            COUCHDB_USER: 'couch'
-            COUCHDB_PASSWORD: '123'
+            - '${FAUCET_PREFIX}/opt/prometheus/:/prometheus'
+            - './etc/prometheus/prometheus-docker-compose.yml:/etc/prometheus/prometheus.yml'
+            - './etc/prometheus/faucet.rules.yml:/etc/prometheus/faucet.rules.yml'
+        links:
+            - faucet
+            - gauge
 
     grafana:
         restart: always
-        image: 'grafana/grafana:3.1.1'
+        image: 'grafana/grafana:5.3.0'
+        user: 'root'
         ports:
             - '3000:3000'
         volumes:
-            - '/opt/grafana:/var/lib/grafana'
+            - '${FAUCET_PREFIX}/opt/grafana:/var/lib/grafana'
         links:
-            - db
+            - influxdb
+            - prometheus
 
     gauge:
         restart: always
@@ -39,25 +47,28 @@ services:
             dockerfile: Dockerfile.gauge
         image: 'faucet/gauge:latest'
         environment:
-           - GAUGE_CONFIG=/etc/ryu/faucet/gauge.yaml
+            GAUGE_CONFIG: '/etc/faucet/gauge.yaml'
         volumes:
-            - '/var/log/ryu/faucet:/var/log/ryu/faucet'
-            - '/etc/ryu/faucet:/etc/ryu/faucet'
+            - '${FAUCET_PREFIX}/var/log/faucet:/var/log/faucet'
+            - '${FAUCET_PREFIX}/etc/faucet:/etc/faucet'
         ports:
             - '6654:6653'
+            - '9303'
         links:
-            - couchdb
-            - db
+            - influxdb
 
     faucet:
         restart: always
         build:
             context: .
-            dockerfile: Dockerfile
+            dockerfile: Dockerfile.faucet
         image: 'faucet/faucet:latest'
         volumes:
-            - '/var/log/ryu/faucet:/var/log/ryu/faucet'
-            - '/etc/ryu/faucet:/etc/ryu/faucet'
+            - '${FAUCET_PREFIX}/var/log/faucet:/var/log/faucet'
+            - '${FAUCET_PREFIX}/etc/faucet:/etc/faucet'
         ports:
             - '6653:6653'
-
+            - '9302'
+        environment:
+            FAUCET_CONFIG_STAT_RELOAD: '${FAUCET_CONFIG_STAT_RELOAD}'
+            FAUCET_EVENT_SOCK: '${FAUCET_EVENT_SOCK}'

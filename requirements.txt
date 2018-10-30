@@ -1,8 +1,13 @@
-couchdb
+chewie==0.0.9
+datadiff
+eventlet==0.22.1 # pyup: ignore
 influxdb
-ipaddress
+msgpack
+msgpack-python
 networkx
-numpy
-prometheus_client
+pbr>=1.9
+prometheus_client<0.4.0
 pyyaml
-ryu==4.14
+ryu==4.29
+beka==0.3.3
+pytricia
